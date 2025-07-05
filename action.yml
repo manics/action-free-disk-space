@@ -1,0 +1,45 @@
+name: Free up disk space
+description: Free up disk space on Ubuntu runners
+
+branding:
+  color: purple
+  icon: disc
+
+inputs:
+  desired-space:
+    description: Desired free space in MB
+    required: true
+    default: "20000"
+  audit-space:
+    description: |
+      Record disk space used by every directory on the filesystem and upload as an artifact.
+      Use this when modifying the action to find out which directories can be deleted.
+      Uses `du -m`.
+    required: true
+    default: "false"
+
+outputs:
+  available-space:
+    description: Available space
+    value: ${{ steps.script.outputs.available-space }}
+
+runs:
+  using: composite
+  steps:
+
+    - id: du
+      if: inputs.audit-space == 'true'
+      run: sudo du -m --exclude=/dev --exclude=/proc --exclude=/sys --exclude=/tmp / > du.txt
+      shell: bash
+
+    - name: Upload du
+      if: inputs.audit-space == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: du
+        path: du.txt
+
+    - name: Run script
+      id: script
+      run: sudo GITHUB_OUTPUT="$GITHUB_OUTPUT" node "$GITHUB_ACTION_PATH/diskspace.js" ~/filler.dat "${{ inputs.desired-space }}"
+      shell: bash
