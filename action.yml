@@ -9,7 +9,7 @@ inputs:
   desired-space:
     description: Desired free space in MB.
     required: true
-    default: "20000"
+    default: "40000"
   audit-space:
     description: |
       Record disk space used by every directory on the filesystem and upload as an artifact.
