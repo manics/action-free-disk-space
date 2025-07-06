@@ -15,6 +15,9 @@ const directoriesToRemove = [
 ];
 
 async function getFreeDiskSpaceMB(path) {
+  /**
+   * Get the free disk space on <path> in MB
+   */
   const stat = await fs.statfs(path);
   const availableMB = Math.floor(stat.bsize * stat.bavail / 1000000)
   console.log(`Available disk space on ${path}: ${availableMB} MB`)
@@ -22,6 +25,9 @@ async function getFreeDiskSpaceMB(path) {
 }
 
 async function deleteDirectories(directories) {
+  /**
+   * Delete directories in parallel
+   */
   const deletionPromises = directories.map(async (dirPath) => {
     try {
       console.log(`Deleting: ${dirPath}`);
@@ -52,26 +58,6 @@ async function deleteDirectories(directories) {
   return errors;
 }
 
-async function createZeroFile(path, sizeMB) {
-  chunkMB = 1000000;
-  const zeroBuffer = Buffer.alloc(chunkMB, 0); // Fills with 0 by default
-  let written = 0;
-
-  let fileHandle = await fs.open(path, 'w');
-  try {
-    while (written < sizeMB) {
-      const { bytesWritten: writtenThisIteration } = await fileHandle.write(zeroBuffer, 0, chunkMB);
-      if (writtenThisIteration != chunkMB) {
-        throw new Error("Failed to write chunk");
-      }
-      written += 1
-    }
-    await fileHandle.sync();
-  } finally {
-    await fileHandle.close();
-  }
-}
-
 async function setGithubOutput(name, value) {
   const githubOutputPath = process.env.GITHUB_OUTPUT;
   if (!githubOutputPath) {
@@ -91,32 +77,27 @@ async function main() {
   // arg0:node arg1:script
   const args = process.argv.slice(2);
 
-  if (args.length != 2) {
-    console.log('Usage: node your_script_name.js <file_path> <size_in_mb>');
-    process.exit(1);
+  if (args.length != 1) {
+    console.log('Usage: node your_script_name.js <desired-space-mb>');
+    process.exit(2);
   }
-  const fileName = args[0];
-  const desiredAvailableMB = parseInt(args[1]);
+  const desiredAvailableMB = parseInt(args[0]);
 
   let availableMB = await getFreeDiskSpaceMB("/");
   if (availableMB < desiredAvailableMB) {
+    console.log("Deleting directories to free up space")
     await deleteDirectories(directoriesToRemove);
     availableMB = await getFreeDiskSpaceMB("/");
-  }
-
-  const fillerMB = availableMB - desiredAvailableMB;
-  if (fillerMB < 0) {
-    console.error(`Available space ${availableMB} is less then desired ${desiredAvailableMB}`);
   } else {
-    console.log(`Creating ${fillerMB} MB filler file`);
-    createZeroFile(fileName, fillerMB);
-    await fsSync();
-    // fs.statfs doesn't seem to update ☹
-    // availableMB = await getFreeDiskSpaceMB("/");
-    availableMB -= fillerMB;
+    console.log("Sufficient free space, not deleting anything")
   }
 
   setGithubOutput("available-space", availableMB)
+
+  if (availableMB < desiredAvailableMB) {
+    console.error(`Available space ${availableMB} is less then desired ${desiredAvailableMB}`);
+    process.exit(1);
+  }
 }
 
 main()

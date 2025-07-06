@@ -7,7 +7,7 @@ branding:
 
 inputs:
   desired-space:
-    description: Desired free space in MB
+    description: Desired free space in MB.
     required: true
     default: "20000"
   audit-space:
@@ -41,5 +41,5 @@ runs:
 
     - name: Run script
       id: script
-      run: sudo GITHUB_OUTPUT="$GITHUB_OUTPUT" node "$GITHUB_ACTION_PATH/diskspace.js" ~/filler.dat "${{ inputs.desired-space }}"
+      run: sudo GITHUB_OUTPUT="$GITHUB_OUTPUT" node "$GITHUB_ACTION_PATH/diskspace.js" "${{ inputs.desired-space }}"
       shell: bash
